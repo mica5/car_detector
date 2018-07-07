@@ -1,0 +1,5 @@
+TRIG = 23
+ECHO = 24
+
+# if the sensor doesn't need to be able to see past a certain distance, set this
+max_distance_cm = 400
