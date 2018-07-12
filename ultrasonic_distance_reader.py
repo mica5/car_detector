@@ -18,7 +18,7 @@ default_count = -1
 def run_main():
     args = parse_cl_args()
 
-    using_count = args.count == default_count
+    using_count = args.count != default_count
     count = args.count
 
     a = np.zeros(10)
