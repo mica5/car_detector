@@ -43,7 +43,7 @@ try:
         if distance < max_distance_cm:
             a[i] = distance
             i += 1
-            print '{:> 7.2f} {:>3.2f} {:>3.2f}'.format(distance, a.mean(), a.std())
+            print('{:> 7.2f} {:>3.2f} {:>3.2f}'.format(distance, a.mean(), a.std()))
             i %= len(a)
 except KeyboardInterrupt:
     GPIO.cleanup()
