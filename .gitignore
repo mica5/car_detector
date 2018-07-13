@@ -103,3 +103,6 @@ venv.bak/
 # mypy
 .mypy_cache/
 config.py
+Mica_Eldridge_CA.pem
+nohup.out
+last_checkup.txt
