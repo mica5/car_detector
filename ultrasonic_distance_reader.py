@@ -6,6 +6,7 @@ import time
 import subprocess
 import datetime
 import argparse
+from os.path import join, abspath, dirname
 
 import RPi.GPIO as GPIO
 import numpy as np
@@ -23,68 +24,82 @@ default_count = -1
 def run_main():
     args = parse_cl_args()
     sleep_seconds = args.seconds
+    do_send_plus_1 = not args.dont_send
+    print_distances = args.print_distances
 
     using_count = args.count != default_count
     count = args.count
 
+    # keep rolling mean/standard deviation
     a = np.zeros(10)
 
     GPIO.setmode(GPIO.BCM)
-    # print "Distance Measurement In Progress"
+    # print("Distance Measurement In Progress")
     GPIO.setup(TRIG,GPIO.OUT)
     GPIO.setup(ECHO,GPIO.IN)
     GPIO.output(TRIG, False)
 
-    # print "Waiting For Sensor To Settle"
+    # print("Waiting For Sensor To Settle")
     time.sleep(2)
     car = False
     last_checkup = datetime.datetime.now()
 
-    # handle KeyboardInterrupt (control-C on the command line)
+    last_checkup_file = join(dirname(abspath(__file__)), 'last_checkup.txt')
     try:
-        i = 0
+        array_index = 0
         while True:
 
-            if (datetime.datetime.now() - last_checkup).total_seconds() > 10:
-                with open('last_checkup.txt', 'w') as fa:
+            # keep sending pings so that the watcher
+            # knows this process isn't frozen.
+            if (datetime.datetime.now() - last_checkup).total_seconds() >= 10:
+                with open(last_checkup_file, 'a') as fa:
                     now = datetime.datetime.now()
                     print(now.strftime('%s'), file=fa, flush=True)
                     last_checkup = now
 
+            # limit to the number of recordings
+            # the user asked for
             if using_count:
                 count -= 1
                 if count <= 0:
                     break
 
-            # get sensor distance data
-            GPIO.output(TRIG, True)
-            # we don't need to check that often..
-            # time.sleep(0.00001)
+            ## get sensor distance data
             time.sleep(sleep_seconds)
+            GPIO.output(TRIG, True)
+            time.sleep(.00001)
             GPIO.output(TRIG, False)
             while GPIO.input(ECHO) == 0:
                 pulse_start = time.time()
             while GPIO.input(ECHO) == 1:
                 pulse_end = time.time()
 
+            # we finally have a distance measurement and
+            # can do interesting stuff with it.
             distance = round((pulse_end - pulse_start) * 17150, 2)
             if distance < max_distance_cm:
-                a[i] = distance
-                i += 1
-                print('{:> 7.2f} {:>3.2f} {:>3.2f}'.format(distance, a.mean(), a.std()))
-                i %= len(a)
+                a[array_index] = distance
+                array_index += 1
+                if print_distances:
+                    print('{:> 7.2f} {:>3.2f} {:>3.2f}'.format(distance, a.mean(), a.std()))
+                array_index %= len(a)
 
                 # count objects
                 if distance < 50:
                     car = True
                 if distance > 50 and car:
                     car = False
-                    subprocess.call('bash sensor', shell=True)
+                    if do_send_plus_1:
+                        subprocess.call('bash sensor', shell=True)
 
-
+    # handle KeyboardInterrupt (control-C on the command line)
     except KeyboardInterrupt:
-        GPIO.cleanup()
         raise
+
+    # clean up whether an error occurred or not
+    finally:
+        # TODO should this be done after every sensor reading??
+        GPIO.cleanup()
 
 
 def parse_cl_args():
@@ -100,6 +115,14 @@ def parse_cl_args():
     argParser.add_argument(
         '-s', '--seconds', type=float, default=.01,
         help='number of seconds between data points, default %(default)s'
+    )
+    argParser.add_argument(
+        '--dont-send', default=False, action='store_true',
+        help="don't send +1s to the database"
+    )
+    argParser.add_argument(
+        '--print-distances', default=False, action='store_true',
+        help="print the distances to stdout; default, don't print"
     )
 
     args = argParser.parse_args()
