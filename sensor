@@ -1,0 +1,34 @@
+#!/bin/bash
+
+#The current time (Dont change this)
+timestamp=$(date +%s)
+
+#The unique device id generated in sha256, change the key after -n and before |
+deviceid=$(echo -n 78923578923578as23vsdfvnrhtg9u5938svn3rfhuo | sha256sum)
+deviceid=${deviceid%???}
+
+#Location of the garage
+location="SJSU_parking_garage_1"
+
+#Garage floor
+floor=0
+
+#Command of what to do
+command="in"
+
+#echo $deviceid
+
+theCurl="https://spotme.violet-mica.com:34449/log_garage?timestamp="
+theCurl+=$timestamp
+theCurl+="&deviceid="
+theCurl+=$deviceid
+theCurl+="&location="
+theCurl+=$location
+theCurl+="&command="
+theCurl+=$command
+theCurl+="&floor="
+theCurl+=$floor
+theCurl+=" --cacert Mica_Eldridge_CA.pem"
+
+#echo $theCurl
+curl $theCurl
