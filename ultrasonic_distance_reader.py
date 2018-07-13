@@ -5,7 +5,7 @@ original setup/code credits to https://www.modmypi.com/blog/hc-sr04-ultrasonic-r
 import RPi.GPIO as GPIO
 import time
 import numpy as np
-import argparse
+import subprocess
 
 from config import (
     TRIG,
@@ -13,73 +13,55 @@ from config import (
     max_distance_cm
 )
 
-default_count = -1
+a = np.zeros(10)
 
-def run_main():
-    args = parse_cl_args()
+GPIO.setmode(GPIO.BCM)
+# print "Distance Measurement In Progress"
+GPIO.setup(TRIG,GPIO.OUT)
+GPIO.setup(ECHO,GPIO.IN)
+GPIO.output(TRIG, False)
 
-    using_count = args.count != default_count
-    count = args.count
+# print "Waiting For Sensor To Settle"
+time.sleep(2)
 
-    a = np.zeros(10)
+# handle KeyboardInterrupt (control-C on the command line)
 
-    GPIO.setmode(GPIO.BCM)
-    # print "Distance Measurement In Progress"
-    GPIO.setup(TRIG,GPIO.OUT)
-    GPIO.setup(ECHO,GPIO.IN)
-    GPIO.output(TRIG, False)
+car = False
 
-    # print "Waiting For Sensor To Settle"
-    time.sleep(2)
 
-    # handle KeyboardInterrupt (control-C on the command line)
-    try:
-        i = 0
-        while True:
-            if using_count:
-                count -= 1
-                if count <= 0:
-                    break
-            GPIO.output(TRIG, True)
+try:
+    i = 0
+    while True:
+        GPIO.output(TRIG, True)
 
-            # we don't need to check that often..
-            # time.sleep(0.00001)
-            time.sleep(0.01)
+        # we don't need to check that often..
+        # time.sleep(0.00001)
+        time.sleep(0.01)
 
-            GPIO.output(TRIG, False)
-            while GPIO.input(ECHO) == 0:
-                pulse_start = time.time()
-            while GPIO.input(ECHO) == 1:
-                pulse_end = time.time()
+        GPIO.output(TRIG, False)
+        while GPIO.input(ECHO) == 0:
+            pulse_start = time.time()
+        while GPIO.input(ECHO) == 1:
+            pulse_end = time.time()
 
-            distance = round((pulse_end - pulse_start) * 17150, 2)
-            if distance < max_distance_cm:
-                a[i] = distance
-                i += 1
-                print('{:> 7.2f} {:>3.2f} {:>3.2f}'.format(distance, a.mean(), a.std()))
-                i %= len(a)
-    except KeyboardInterrupt:
-        GPIO.cleanup()
-        raise
+        distance = round((pulse_end - pulse_start) * 17150, 2)
+        if distance < max_distance_cm:
+            a[i] = distance
+            i += 1
+            print('{:> 7.2f} {:>3.2f} {:>3.2f}'.format(distance, a.mean(), a.std()))
+            i %= len(a)
+
+            if distance < 50:
+                car = True
+            if distance > 50 and car == True:
+                car = False
+                bashCommand = "bash sensor"
+                process = subprocess.Popen(bashCommand.split(), stdout=subprocess.PIPE)
+                output, error = process.communicate()
+                
+                
+                
+                    
+except KeyboardInterrupt:
     GPIO.cleanup()
-
-
-    success = True
-    return success
-
-def parse_cl_args():
-    argParser = argparse.ArgumentParser(
-        description=__doc__,
-        formatter_class=argparse.RawTextHelpFormatter,
-    )
-
-    argParser.add_argument('-c', '--count', type=int, default=default_count)
-
-    args = argParser.parse_args()
-    return args
-
-
-if __name__ == '__main__':
-    success = run_main()
-    exit_code = 0 if success else 1
-    exit(exit_code)
+    raise
