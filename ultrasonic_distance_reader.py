@@ -100,20 +100,19 @@ def run_main():
             # we finally have a distance measurement and
             # can do interesting stuff with it.
             distance = round((pulse_end - pulse_start) * 17150, 2)
-            if distance < max_distance_cm:
-                a[array_index] = distance
-                array_index += 1
-                if print_distances:
-                    print('{:> 7.2f} {:>3.2f} {:>3.2f}'.format(distance, a.mean(), a.std()))
-                array_index %= len(a)
+            a[array_index] = distance
+            array_index += 1
+            if print_distances:
+                print('{:> 7.2f} {:>3.2f} {:>3.2f}'.format(distance, a.mean(), a.std()))
+            array_index %= len(a)
 
-                # count objects
-                if distance < 50:
-                    car = True
-                if distance > 50 and car:
-                    car = False
-                    if do_send_plus_1:
-                        subprocess.call('bash sensor', shell=True)
+            # count objects
+            if distance < 50:
+                car = True
+            if distance > 50 and car:
+                car = False
+                if do_send_plus_1:
+                    subprocess.call('bash sensor', shell=True)
 
     # handle KeyboardInterrupt (control-C on the command line)
     except KeyboardInterrupt:
