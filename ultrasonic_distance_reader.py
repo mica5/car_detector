@@ -26,6 +26,8 @@ def run_main():
     sleep_seconds = args.seconds
     do_send_plus_1 = not args.dont_send
     print_distances = args.print_distances
+    max_distance_cm = args.max_distance
+    send_checkups = args.send_checkups
 
     using_count = args.count != default_count
     count = args.count
@@ -39,23 +41,27 @@ def run_main():
     GPIO.setup(ECHO,GPIO.IN)
     GPIO.output(TRIG, False)
 
+    car = False
+    last_checkup = datetime.datetime.now() - datetime.timedelta(seconds=10)
+    exit_now = False
+
+    if send_checkups:
+        last_checkup_fifo = join(dirname(abspath(__file__)), 'last_checkup.fifo')
+        subprocess.call('mkfifo "{}"'.format(last_checkup_fifo), shell=True)
+        send_checkup_command = 'date +%s >> "{}" &'.format(last_checkup_fifo)
+
     # print("Waiting For Sensor To Settle")
     time.sleep(2)
-    car = False
-    last_checkup = datetime.datetime.now()
-
-    last_checkup_file = join(dirname(abspath(__file__)), 'last_checkup.txt')
     try:
         array_index = 0
         while True:
 
             # keep sending pings so that the watcher
             # knows this process isn't frozen.
-            if (datetime.datetime.now() - last_checkup).total_seconds() >= 10:
-                with open(last_checkup_file, 'a') as fa:
-                    now = datetime.datetime.now()
-                    print(now.strftime('%s'), file=fa, flush=True)
-                    last_checkup = now
+            if send_checkups:
+                if (datetime.datetime.now() - last_checkup).total_seconds() >= 10:
+                    last_checkup = datetime.datetime.now()
+                    subprocess.call(send_checkup_command, shell=True)
 
             # limit to the number of recordings
             # the user asked for
@@ -63,14 +69,22 @@ def run_main():
                 count -= 1
                 if count <= 0:
                     break
+            if exit_now:
+                break
 
             ## get sensor distance data
             time.sleep(sleep_seconds)
+
+            # create the trigger pulse by turning TRIG on for 10 microseconds.
             GPIO.output(TRIG, True)
             time.sleep(.00001)
             GPIO.output(TRIG, False)
+
+            # see how long it takes for pulse to reach back to sensor
+            pulse_start = time.time()
             while GPIO.input(ECHO) == 0:
                 pulse_start = time.time()
+            pulse_end = time.time()
             while GPIO.input(ECHO) == 1:
                 pulse_end = time.time()
 
@@ -99,6 +113,7 @@ def run_main():
     # clean up whether an error occurred or not
     finally:
         # TODO should this be done after every sensor reading??
+        print('cleaning up')
         GPIO.cleanup()
 
 
@@ -123,6 +138,14 @@ def parse_cl_args():
     argParser.add_argument(
         '--print-distances', default=False, action='store_true',
         help="print the distances to stdout; default, don't print"
+    )
+    argParser.add_argument(
+        '--max-distance', default=max_distance_cm, type=float,
+        help="consider this to be the max allowed detectable distance, and any reading greater than this will be ignored. default from the config.py is %(default)s"
+    )
+    argParser.add_argument(
+        '--send-checkups', default=False, action='store_true',
+        help="every 10 seconds, write current timestamp to named pipe 'last_checkup.fifo', so that watcher program can detect if this program freezes"
     )
 
     args = argParser.parse_args()
