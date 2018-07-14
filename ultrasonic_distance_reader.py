@@ -28,6 +28,7 @@ def run_main():
     print_distances = args.print_distances
     max_distance_cm = args.max_distance
     send_checkups = args.send_checkups
+    max_distance_in_seconds = max_distance_cm / 17150
 
     using_count = args.count != default_count
     count = args.count
@@ -80,13 +81,21 @@ def run_main():
             time.sleep(.00001)
             GPIO.output(TRIG, False)
 
-            # see how long it takes for pulse to reach back to sensor
-            pulse_start = time.time()
+            # see how long it takes for pulse to reach back to sensor.
+            # handle the case when we never get any input.
+            time_before_loops = time.time()
             while GPIO.input(ECHO) == 0:
-                pulse_start = time.time()
-            pulse_end = time.time()
+                # maximum 13 feet
+                if time.time() - time_before_loops > max_distance_in_seconds:
+                    break
+            # front of wave hits input sensor
+            pulse_start = time.time()
             while GPIO.input(ECHO) == 1:
-                pulse_end = time.time()
+                # maximum 13 feet
+                if time.time() - time_before_loops > max_distance_in_seconds:
+                    break
+            # end of wave stops hitting input sensor
+            pulse_end = time.time()
 
             # we finally have a distance measurement and
             # can do interesting stuff with it.

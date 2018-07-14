@@ -1,8 +1,12 @@
 #!/usr/bin/env bash
 
+if [ ! -e last_checkup.fifo ] ; then
+    mkfifo last_checkup.fifo
+fi
+
 while true ; do
 
-    ping_seconds_ago=$(( $(date +%s) - $(cat last_checkup.txt ) ))
+    ping_seconds_ago=$(( $(date +%s) - $(cat last_checkup.fifo ) ))
 
     running=true
     ps aux | grep [u]ltrasonic_distance_reader.py >/dev/null || running=false
@@ -18,15 +22,14 @@ while true ; do
         restart=true
         ps aux | grep -v grep | grep [u]ltrasonic_distance_reader.py \
             | while read line ; do
-                kill $(echo $line|cut -d" " -f2)
+                # send INT to allow it to clean up resources.
+                # it's equivalent to KeyboardInterrupt (control-c).
+                kill -INT $(echo $line|cut -d" " -f2)
             done
     fi
 
     if $restart ; then
-        echo restarting
-        nohup bash -c '/usr/bin/python3 ultrasonic_distance_reader.py | nc localhost 53134' &
-    else
-        echo not restarting
+        nohup bash -c '/usr/bin/python3 ultrasonic_distance_reader.py --send-checkups' &
     fi
 
     sleep 20
