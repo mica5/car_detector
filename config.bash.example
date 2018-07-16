@@ -1,1 +1,5 @@
 API_KEY=
+# ip address or domain name
+REMOTE_HOSTNAME=
+REMOTE_USERNAME=
+LOCALHOST_PORT=
