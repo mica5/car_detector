@@ -3,6 +3,8 @@
 #The current time (Dont change this)
 timestamp=$(date +%s)
 
+this_dir="$(dirname "$(readlink -e $0)")"
+
 #The unique device id generated in sha256, change the key after -n and before |
 deviceid=$(echo -n 78923578923578as23vsdfvnrhtg9u5938svn3rfhuo | sha256sum)
 deviceid=${deviceid%???}
@@ -18,17 +20,17 @@ command="in"
 
 #echo $deviceid
 
-theCurl="https://spotme.violet-mica.com:34449/log_garage?timestamp="
-theCurl+=$timestamp
-theCurl+="&deviceid="
-theCurl+=$deviceid
-theCurl+="&location="
-theCurl+=$location
-theCurl+="&command="
-theCurl+=$command
-theCurl+="&floor="
-theCurl+=$floor
-theCurl+=" --cacert Mica_Eldridge_CA.pem"
+curl_url="https://spotme.violet-mica.com:34449/log_garage?timestamp="
+curl_url+=$timestamp
+curl_url+="&deviceid="
+curl_url+=$deviceid
+curl_url+="&location="
+curl_url+=$location
+curl_url+="&command="
+curl_url+=$command
+curl_url+="&floor="
+curl_url+=$floor
 
-#echo $theCurl
-curl $theCurl
+# echo $curl_url
+curl "$curl_url" --cacert "$this_dir"/Mica_Eldridge_CA.pem
+

@@ -45,11 +45,14 @@ def run_main():
     car = False
     last_checkup = datetime.datetime.now() - datetime.timedelta(seconds=10)
     exit_now = False
+    this_dir = dirname(abspath(__file__))
 
     if send_checkups:
-        last_checkup_fifo = join(dirname(abspath(__file__)), 'last_checkup.fifo')
+        last_checkup_fifo = join(this_dir, 'last_checkup.fifo')
         subprocess.call('mkfifo "{}"'.format(last_checkup_fifo), shell=True)
         send_checkup_command = 'date +%s >> "{}" &'.format(last_checkup_fifo)
+
+    send_plus_1_command = 'bash {}'.format(join(this_dir, 'sensor'))
 
     # print("Waiting For Sensor To Settle")
     time.sleep(2)
@@ -112,7 +115,7 @@ def run_main():
             if distance > 50 and car:
                 car = False
                 if do_send_plus_1:
-                    subprocess.call('bash sensor', shell=True)
+                    subprocess.call(send_plus_1_command, shell=True)
 
     # handle KeyboardInterrupt (control-C on the command line)
     except KeyboardInterrupt:
