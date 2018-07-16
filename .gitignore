@@ -106,3 +106,4 @@ config.py
 Mica_Eldridge_CA.pem
 nohup.out
 last_checkup.txt
+config.bash

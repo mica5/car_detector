@@ -4,6 +4,7 @@
 timestamp=$(date +%s)
 
 this_dir="$(dirname "$(readlink -e $0)")"
+source "$this_dir"/config.bash
 
 #The unique device id generated in sha256, change the key after -n and before |
 deviceid=$(echo -n 78923578923578as23vsdfvnrhtg9u5938svn3rfhuo | sha256sum)
@@ -30,7 +31,8 @@ curl_url+="&command="
 curl_url+=$command
 curl_url+="&floor="
 curl_url+=$floor
+curl_url+="&key="
+curl_url+="$API_KEY"
 
 # echo $curl_url
-curl "$curl_url" --cacert "$this_dir"/Mica_Eldridge_CA.pem
-
+curl "$curl_url" --cacert "$this_dir"/Mica_Eldridge_CA.pem --silent >/dev/null
