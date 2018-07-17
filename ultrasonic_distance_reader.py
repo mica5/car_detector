@@ -109,10 +109,11 @@ def run_main():
                 print('{:> 7.2f} {:>3.2f} {:>3.2f}'.format(distance, a.mean(), a.std()))
             array_index %= len(a)
 
+            distance_feet = distance / 2.54
             # count objects
-            if distance < 50:
+            if distance_feet < 50:
                 car = True
-            if distance > 50 and car:
+            if distance_feet > 50 and car:
                 car = False
                 if do_send_plus_1:
                     subprocess.call(send_plus_1_command, shell=True)
