@@ -20,6 +20,12 @@ from config import (
 a = np.zeros(10)
 default_count = -1
 
+def rolling_average(val, new_val):
+    final_val = val
+    if val == 0:
+        final_val = new_val
+    final_val += .01 * (new_val - val)
+    return final_val
 
 def run_main():
     args = parse_cl_args()
@@ -29,6 +35,7 @@ def run_main():
     max_distance_cm = args.max_distance
     send_checkups = args.send_checkups
     max_distance_in_seconds = max_distance_cm / 17150
+    print_plus_1s = args.print_plus_1s
 
     using_count = args.count != default_count
     count = args.count
@@ -53,6 +60,7 @@ def run_main():
         send_checkup_command = 'date +%s >> "{}" &'.format(last_checkup_fifo)
 
     send_plus_1_command = 'bash {}'.format(join(this_dir, 'sensor'))
+    wall_dist = 6
 
     # print("Waiting For Sensor To Settle")
     time.sleep(2)
@@ -109,14 +117,17 @@ def run_main():
                 print('{:> 7.2f} {:>3.2f} {:>3.2f}'.format(distance, a.mean(), a.std()))
             array_index %= len(a)
 
-            distance_feet = distance / 2.54
+            distance_feet = distance / 2.54 / 12
+            wall_dist = rolling_average(wall_dist, distance_feet)
             # count objects
-            if distance_feet < 50:
+            if distance_feet < wall_dist - 1:
                 car = True
-            if distance_feet > 50 and car:
+            elif distance_feet > (wall_dist - 1) and car:
                 car = False
                 if do_send_plus_1:
                     subprocess.call(send_plus_1_command, shell=True)
+                if print_plus_1s:
+                    print('+1')
 
     # handle KeyboardInterrupt (control-C on the command line)
     except KeyboardInterrupt:
@@ -150,6 +161,9 @@ def parse_cl_args():
     argParser.add_argument(
         '--print-distances', default=False, action='store_true',
         help="print the distances to stdout; default, don't print"
+    )
+    argParser.add_argument(
+        '--print-plus-1s', default=False, action='store_true',
     )
     argParser.add_argument(
         '--max-distance', default=max_distance_cm, type=float,
